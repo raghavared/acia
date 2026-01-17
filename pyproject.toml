@@ -1,0 +1,114 @@
+[build-system]
+requires = ["setuptools>=64", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "acia"
+version = "0.1.0"
+description = "Autonomous Code Improvement Agent - A foundation model for autonomous code analysis and improvement"
+readme = "README.md"
+license = {text = "MIT"}
+authors = [
+    {name = "ACIA Team", email = "acia@example.com"}
+]
+requires-python = ">=3.11"
+keywords = ["code-improvement", "ai", "autonomous", "devops", "llm"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Software Development :: Quality Assurance",
+    "Topic :: Software Development :: Testing",
+]
+
+dependencies = [
+    "pyyaml>=6.0",
+    "pydantic>=2.0",
+    "pydantic-settings>=2.0",
+    "click>=8.0",
+    "structlog>=23.0",
+    "aiofiles>=23.0",
+    "gitpython>=3.1",
+    "pygithub>=2.0",
+    "anthropic>=0.25",
+    "httpx>=0.25",
+    "aiosmtplib>=3.0",
+    "jinja2>=3.0",
+    "aiosqlite>=0.19",
+    "tenacity>=8.0",
+    "rich>=13.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.0",
+    "pytest-asyncio>=0.21",
+    "pytest-cov>=4.0",
+    "black>=23.0",
+    "ruff>=0.1",
+    "mypy>=1.0",
+]
+all-analyzers = [
+    "pylint>=3.0",
+    "flake8>=6.0",
+    "mypy>=1.0",
+    "radon>=6.0",
+    "bandit>=1.7",
+]
+elasticsearch = [
+    "elasticsearch>=8.0",
+]
+cloudwatch = [
+    "boto3>=1.28",
+    "aioboto3>=12.0",
+]
+openai = [
+    "openai>=1.0",
+    "tiktoken>=0.5",
+]
+slack = [
+    "slack-sdk>=3.0",
+]
+postgres = [
+    "asyncpg>=0.29",
+]
+mongodb = [
+    "motor>=3.0",
+]
+
+[project.scripts]
+acia = "acia.main:main"
+
+[project.urls]
+Homepage = "https://github.com/raghavared/acia"
+Documentation = "https://github.com/raghavared/acia#readme"
+Repository = "https://github.com/raghavared/acia.git"
+Issues = "https://github.com/raghavared/acia/issues"
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["acia*"]
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths = ["tests"]
+addopts = "-v --tb=short"
+
+[tool.black]
+line-length = 100
+target-version = ["py311", "py312"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+select = ["E", "F", "W", "I", "N", "UP", "B", "C4"]
+ignore = ["E501"]
+
+[tool.mypy]
+python_version = "3.11"
+warn_return_any = true
+warn_unused_configs = true
+disallow_untyped_defs = true

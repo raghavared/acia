@@ -1,0 +1,67 @@
+# ACIA - Autonomous Code Improvement Agent
+# Python Dependencies
+
+# Core
+pyyaml>=6.0
+pydantic>=2.0
+pydantic-settings>=2.0
+click>=8.0
+
+# Async & Concurrency
+asyncio-throttle>=1.0
+aiofiles>=23.0
+aiocache>=0.12
+
+# Git & Version Control
+gitpython>=3.1
+pygithub>=2.0
+python-gitlab>=4.0
+
+# Log Analysis
+elasticsearch>=8.0
+boto3>=1.28  # AWS CloudWatch
+datadog>=0.47
+watchdog>=3.0
+
+# Code Analysis
+pylint>=3.0
+flake8>=6.0
+mypy>=1.0
+radon>=6.0  # Complexity metrics
+bandit>=1.7  # Security
+semgrep>=1.0
+
+# AI/LLM
+anthropic>=0.25
+openai>=1.0
+tiktoken>=0.5  # Token counting
+langchain>=0.1  # Optional, for chains
+
+# Email & Notifications
+aiosmtplib>=3.0
+jinja2>=3.0
+slack-sdk>=3.0
+httpx>=0.25  # Async HTTP for webhooks
+
+# Storage
+aiosqlite>=0.19
+asyncpg>=0.29
+motor>=3.0  # Async MongoDB
+
+# Observability
+prometheus-client>=0.19
+structlog>=23.0
+opentelemetry-api>=1.0
+opentelemetry-sdk>=1.0
+
+# Testing (for generated tests)
+pytest>=7.0
+pytest-asyncio>=0.21
+pytest-cov>=4.0
+hypothesis>=6.0
+
+# Utilities
+python-dotenv>=1.0
+rich>=13.0  # Beautiful terminal output
+tenacity>=8.0  # Retries
+croniter>=2.0  # Cron scheduling

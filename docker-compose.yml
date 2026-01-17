@@ -1,0 +1,96 @@
+version: '3.8'
+
+services:
+  # Main ACIA service - runs the infinite loop
+  acia:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: acia-agent
+    restart: always  # ALWAYS restart - this should NEVER stop
+    environment:
+      - ACIA_CONFIG=/app/config.yaml
+      - GITHUB_TOKEN=${GITHUB_TOKEN}
+      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
+      - SMTP_USERNAME=${SMTP_USERNAME}
+      - SMTP_PASSWORD=${SMTP_PASSWORD}
+      - SLACK_WEBHOOK_URL=${SLACK_WEBHOOK_URL}
+    volumes:
+      - ./config.yaml:/app/config.yaml:ro
+      - acia-data:/var/acia
+      - acia-repos:/var/acia/repos
+    depends_on:
+      - postgres
+    networks:
+      - acia-network
+    healthcheck:
+      test: ["CMD", "python", "-c", "import asyncio; from acia import Orchestrator; print('OK')"]
+      interval: 60s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+
+  # PostgreSQL for state storage
+  postgres:
+    image: postgres:15-alpine
+    container_name: acia-postgres
+    restart: always
+    environment:
+      - POSTGRES_USER=acia
+      - POSTGRES_PASSWORD=${PG_PASSWORD:-acia_secure_password}
+      - POSTGRES_DB=acia
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    networks:
+      - acia-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U acia"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Prometheus for metrics
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: acia-prometheus
+    restart: always
+    volumes:
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus-data:/prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--web.enable-lifecycle'
+    ports:
+      - "9090:9090"
+    networks:
+      - acia-network
+
+  # Grafana for dashboards
+  grafana:
+    image: grafana/grafana:latest
+    container_name: acia-grafana
+    restart: always
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_PASSWORD:-admin}
+      - GF_USERS_ALLOW_SIGN_UP=false
+    volumes:
+      - grafana-data:/var/lib/grafana
+      - ./grafana/provisioning:/etc/grafana/provisioning:ro
+    ports:
+      - "3000:3000"
+    depends_on:
+      - prometheus
+    networks:
+      - acia-network
+
+volumes:
+  acia-data:
+  acia-repos:
+  postgres-data:
+  prometheus-data:
+  grafana-data:
+
+networks:
+  acia-network:
+    driver: bridge

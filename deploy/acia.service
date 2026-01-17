@@ -1,0 +1,54 @@
+[Unit]
+Description=ACIA - Autonomous Code Improvement Agent
+Documentation=https://github.com/raghavared/acia
+After=network.target postgresql.service
+Wants=postgresql.service
+
+[Service]
+Type=simple
+User=acia
+Group=acia
+WorkingDirectory=/opt/acia
+Environment="PATH=/opt/acia/venv/bin:/usr/local/bin:/usr/bin"
+Environment="ACIA_CONFIG=/opt/acia/config.yaml"
+EnvironmentFile=-/opt/acia/.env
+
+# The command to run ACIA - this runs FOREVER
+ExecStart=/opt/acia/venv/bin/python -m acia.main run --config /opt/acia/config.yaml
+
+# CRITICAL: Always restart - ACIA should NEVER stop
+Restart=always
+RestartSec=30
+
+# Watchdog settings - detect hung processes
+WatchdogSec=300
+NotifyAccess=main
+
+# Resource limits
+MemoryMax=4G
+CPUQuota=200%
+
+# Logging
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=acia
+
+# Security hardening
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=true
+PrivateTmp=true
+PrivateDevices=true
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectControlGroups=true
+RestrictSUIDSGID=true
+
+# Allow network access
+PrivateNetwork=false
+
+# Allow write to specific directories
+ReadWritePaths=/var/acia /opt/acia/logs
+
+[Install]
+WantedBy=multi-user.target

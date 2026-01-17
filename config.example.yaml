@@ -1,0 +1,340 @@
+# ACIA Configuration Example
+# Copy this to config.yaml and customize
+
+# =============================================================================
+# ORCHESTRATOR SETTINGS
+# =============================================================================
+orchestrator:
+  # How often to run the improvement cycle (in seconds)
+  cycle_interval: 3600  # 1 hour
+  
+  # Maximum concurrent tasks
+  max_workers: 4
+  
+  # Enable/disable specific analyzers
+  enabled_analyzers:
+    - log_analyzer
+    - code_analyzer
+    - security_scanner
+    - dependency_checker
+  
+  # Graceful shutdown timeout (seconds)
+  shutdown_timeout: 300
+
+# =============================================================================
+# CODEBASE CONFIGURATION
+# =============================================================================
+codebase:
+  # Git repository URL
+  repository_url: "https://github.com/your-org/your-repo.git"
+  
+  # Branch to analyze and improve
+  target_branch: "main"
+  
+  # Local path for cloned repo
+  local_path: "/var/acia/repos/your-repo"
+  
+  # Authentication
+  auth:
+    type: "token"  # token, ssh, or basic
+    token_env_var: "GITHUB_TOKEN"  # Environment variable containing token
+    # ssh_key_path: "~/.ssh/id_rsa"  # For SSH auth
+  
+  # File patterns to analyze
+  include_patterns:
+    - "**/*.py"
+    - "**/*.js"
+    - "**/*.ts"
+    - "**/*.java"
+    - "**/*.go"
+  
+  exclude_patterns:
+    - "**/node_modules/**"
+    - "**/venv/**"
+    - "**/__pycache__/**"
+    - "**/dist/**"
+    - "**/build/**"
+    - "**/*.min.js"
+
+# =============================================================================
+# LOG SOURCES
+# =============================================================================
+logs:
+  sources:
+    - name: "application_logs"
+      type: "file"  # file, elasticsearch, cloudwatch, datadog, splunk
+      path: "/var/log/app/*.log"
+      format: "json"  # json, plain, structured
+      
+    - name: "error_logs"
+      type: "elasticsearch"
+      host: "https://elasticsearch.example.com"
+      index: "app-errors-*"
+      auth_env_var: "ES_API_KEY"
+      
+    - name: "cloudwatch_logs"
+      type: "cloudwatch"
+      log_group: "/aws/lambda/my-function"
+      region: "us-east-1"
+  
+  # How far back to analyze logs
+  lookback_period: "24h"
+  
+  # Minimum error count to trigger analysis
+  error_threshold: 5
+  
+  # Patterns to ignore
+  ignore_patterns:
+    - "healthcheck"
+    - "DEBUG"
+
+# =============================================================================
+# CODE ANALYSIS SETTINGS
+# =============================================================================
+analysis:
+  # Static analysis tools to use
+  static_analyzers:
+    python:
+      - tool: "pylint"
+        config: ".pylintrc"
+        min_score: 8.0
+      - tool: "flake8"
+        config: ".flake8"
+      - tool: "mypy"
+        strict: true
+    
+    javascript:
+      - tool: "eslint"
+        config: ".eslintrc.js"
+      - tool: "typescript"
+        strict: true
+    
+    java:
+      - tool: "checkstyle"
+      - tool: "spotbugs"
+  
+  # Complexity thresholds
+  complexity:
+    max_cyclomatic: 10
+    max_cognitive: 15
+    max_function_length: 50
+    max_file_length: 500
+  
+  # Security scanning
+  security:
+    enabled: true
+    tools:
+      - "bandit"      # Python
+      - "semgrep"     # Multi-language
+      - "npm-audit"   # JavaScript
+    severity_threshold: "medium"  # low, medium, high, critical
+  
+  # Dependency analysis
+  dependencies:
+    check_outdated: true
+    check_vulnerabilities: true
+    auto_update_patch: true
+    auto_update_minor: false
+
+# =============================================================================
+# AI/LLM IMPROVEMENT ENGINE
+# =============================================================================
+improvement_engine:
+  # LLM provider configuration
+  provider: "anthropic"  # anthropic, openai, local
+  
+  anthropic:
+    model: "claude-sonnet-4-20250514"
+    api_key_env_var: "ANTHROPIC_API_KEY"
+    max_tokens: 4096
+  
+  openai:
+    model: "gpt-4-turbo"
+    api_key_env_var: "OPENAI_API_KEY"
+  
+  local:
+    endpoint: "http://localhost:11434/api/generate"
+    model: "codellama:34b"
+  
+  # Improvement strategies
+  strategies:
+    - name: "bug_fix"
+      priority: 1
+      enabled: true
+      
+    - name: "security_fix"
+      priority: 2
+      enabled: true
+      
+    - name: "performance_optimization"
+      priority: 3
+      enabled: true
+      
+    - name: "code_cleanup"
+      priority: 4
+      enabled: true
+      
+    - name: "documentation"
+      priority: 5
+      enabled: false
+  
+  # Constraints
+  constraints:
+    max_changes_per_file: 10
+    max_files_per_pr: 5
+    require_tests: true
+    require_type_hints: true
+
+# =============================================================================
+# GIT & PR CONFIGURATION
+# =============================================================================
+git:
+  # Git user for commits
+  user:
+    name: "ACIA Bot"
+    email: "acia-bot@example.com"
+  
+  # Branch naming
+  branch_prefix: "acia/"
+  branch_format: "{type}/{timestamp}-{short_description}"
+  
+  # Commit message format
+  commit_format: "[ACIA] {type}: {description}"
+  
+  # PR settings
+  pull_request:
+    # GitHub, GitLab, Bitbucket, Azure DevOps
+    platform: "github"
+    
+    # PR template
+    title_format: "[ACIA] {type}: {summary}"
+    
+    # Labels to add
+    labels:
+      - "automated"
+      - "acia-bot"
+    
+    # Reviewers to assign
+    reviewers:
+      - "senior-dev"
+      - "tech-lead"
+    
+    # Auto-merge settings
+    auto_merge:
+      enabled: false
+      require_approvals: 2
+      require_checks_pass: true
+
+# =============================================================================
+# NOTIFICATION SETTINGS
+# =============================================================================
+notifications:
+  email:
+    enabled: true
+    smtp:
+      host: "smtp.example.com"
+      port: 587
+      use_tls: true
+      username_env_var: "SMTP_USERNAME"
+      password_env_var: "SMTP_PASSWORD"
+    
+    from_address: "acia-bot@example.com"
+    
+    # Recipients for different event types
+    recipients:
+      pr_created:
+        - "dev-team@example.com"
+        - "tech-lead@example.com"
+      
+      error_detected:
+        - "oncall@example.com"
+      
+      security_issue:
+        - "security@example.com"
+        - "tech-lead@example.com"
+      
+      daily_summary:
+        - "engineering-managers@example.com"
+  
+  slack:
+    enabled: true
+    webhook_url_env_var: "SLACK_WEBHOOK_URL"
+    channel: "#acia-notifications"
+  
+  webhook:
+    enabled: false
+    endpoints:
+      - url: "https://api.example.com/acia-events"
+        events: ["pr_created", "error_detected"]
+        auth_header_env_var: "WEBHOOK_AUTH"
+
+# =============================================================================
+# STORAGE & STATE
+# =============================================================================
+storage:
+  # Where to store ACIA state and history
+  type: "sqlite"  # sqlite, postgres, mongodb
+  
+  sqlite:
+    path: "/var/acia/acia.db"
+  
+  postgres:
+    host: "localhost"
+    port: 5432
+    database: "acia"
+    user_env_var: "PG_USER"
+    password_env_var: "PG_PASSWORD"
+  
+  # State retention
+  retention:
+    analysis_history: "30d"
+    pr_history: "90d"
+    log_cache: "7d"
+
+# =============================================================================
+# OBSERVABILITY
+# =============================================================================
+observability:
+  logging:
+    level: "INFO"
+    format: "json"
+    output: "/var/log/acia/acia.log"
+  
+  metrics:
+    enabled: true
+    type: "prometheus"
+    port: 9090
+    path: "/metrics"
+  
+  tracing:
+    enabled: false
+    type: "jaeger"
+    endpoint: "http://localhost:14268/api/traces"
+
+# =============================================================================
+# SAFETY & LIMITS
+# =============================================================================
+safety:
+  # Dry run mode - analyze but don't make changes
+  dry_run: false
+  
+  # Maximum PRs per day
+  max_prs_per_day: 10
+  
+  # Require human approval for certain change types
+  require_approval:
+    - "database_migrations"
+    - "api_changes"
+    - "authentication"
+  
+  # Files that should never be modified
+  protected_files:
+    - "config/production.yaml"
+    - ".env*"
+    - "secrets/*"
+  
+  # Rollback settings
+  rollback:
+    enabled: true
+    on_test_failure: true
+    on_deployment_failure: true
