@@ -54,11 +54,35 @@ class AnthropicProvider(LLMProvider):
     def __init__(self, config: LLMProviderConfig):
         super().__init__(config)
         self._client = None
+        self._validated = False
     
     def _get_client(self):
         if self._client is None:
             import anthropic
+            import os
+            
+            # Try to get API key from config
             api_key = self.config.get_api_key()
+            
+            # If not in config, try common env var names
+            if not api_key:
+                api_key = os.getenv("ANTHROPIC_API_KEY")
+            
+            if not api_key:
+                raise ValueError(
+                    "Anthropic API key not found. Please either:\n"
+                    "  1. Set ANTHROPIC_API_KEY environment variable:\n"
+                    "     export ANTHROPIC_API_KEY='sk-ant-...'\n"
+                    "  2. Or set api_key_env_var in config.yaml:\n"
+                    "     improvement_engine:\n"
+                    "       anthropic:\n"
+                    "         api_key_env_var: 'ANTHROPIC_API_KEY'"
+                )
+            
+            if not self._validated:
+                logger.info(f"Anthropic API key found (starts with: {api_key[:10]}...)")
+                self._validated = True
+            
             self._client = anthropic.Anthropic(api_key=api_key)
         return self._client
     
@@ -243,7 +267,38 @@ class ImprovementEngine:
         if self._initialized:
             return
         
+        import os
+        
         provider_config = self.config.get_active_provider()
+        
+        # Validate API key is available BEFORE creating provider
+        if self.config.provider == "anthropic":
+            # get_api_key() checks both direct api_key and api_key_env_var
+            api_key = provider_config.get_api_key()
+            
+            # Fallback to common env var if not in config
+            if not api_key:
+                api_key = os.getenv("ANTHROPIC_API_KEY")
+            
+            if not api_key:
+                print("\n  ⚠️  ERROR: Anthropic API key not found!", flush=True)
+                print("     Option 1 - Add directly to config.yaml:", flush=True)
+                print("       improvement_engine:", flush=True)
+                print("         anthropic:", flush=True)
+                print("           api_key: 'sk-ant-...'", flush=True)
+                print("     Option 2 - Use environment variable:", flush=True)
+                print("       export ANTHROPIC_API_KEY='sk-ant-...'\n", flush=True)
+                raise ValueError("Anthropic API key not configured")
+            print(f"  ✓ Anthropic API key loaded (length: {len(api_key)})", flush=True)
+        
+        elif self.config.provider == "openai":
+            api_key = provider_config.get_api_key()
+            if not api_key:
+                api_key = os.getenv("OPENAI_API_KEY")
+            if not api_key:
+                print("\n  ⚠️  ERROR: OpenAI API key not found!", flush=True)
+                raise ValueError("OpenAI API key not configured")
+            print(f"  ✓ OpenAI API key loaded", flush=True)
         
         providers = {
             "anthropic": AnthropicProvider,
@@ -683,6 +738,7 @@ class ImprovementEngine:
     def _parse_fix_response(self, response: str) -> dict | None:
         """Parse the LLM response as JSON."""
         import json
+        import re
         
         # Try to extract JSON from response
         try:
@@ -691,12 +747,29 @@ class ImprovementEngine:
         except json.JSONDecodeError:
             pass
         
-        # Try to find JSON in the response
-        import re
-        json_match = re.search(r'\{[^{}]*\}', response, re.DOTALL)
+        # Try to find JSON block in markdown code blocks
+        json_block_match = re.search(r'```json\s*\n(.*?)\n```', response, re.DOTALL)
+        if json_block_match:
+            try:
+                return json.loads(json_block_match.group(1))
+            except json.JSONDecodeError:
+                pass
+        
+        # Try to find any JSON object in the response (improved regex for nested objects)
+        json_match = re.search(r'\{(?:[^{}]|{[^{}]*})*\}', response, re.DOTALL)
         if json_match:
             try:
                 return json.loads(json_match.group())
+            except json.JSONDecodeError:
+                pass
+        
+        # Try to find JSON starting from first { to last }
+        start_brace = response.find('{')
+        end_brace = response.rfind('}')
+        if start_brace != -1 and end_brace != -1 and end_brace > start_brace:
+            try:
+                json_str = response[start_brace:end_brace + 1]
+                return json.loads(json_str)
             except json.JSONDecodeError:
                 pass
         

@@ -123,10 +123,24 @@ class EmailNotifier(Notifier):
     def __init__(self, config: EmailConfig):
         self.config = config
         self.smtp = config.smtp
+        self._warned = False
     
     async def send(self, event: NotificationEvent) -> bool:
         """Send an email notification."""
-        if not self.config.enabled or not self.smtp:
+        if not self.config.enabled:
+            return False
+        
+        if not self.smtp:
+            if not self._warned:
+                logger.debug("Email SMTP not configured, skipping")
+                self._warned = True
+            return False
+        
+        # Check if SMTP host is a placeholder
+        if self.smtp.host in ("smtp.example.com", "localhost", ""):
+            if not self._warned:
+                logger.debug("Email SMTP host not configured (using example/placeholder)")
+                self._warned = True
             return False
         
         recipients = self.config.recipients.get(event.event_type, [])
@@ -168,7 +182,9 @@ class EmailNotifier(Notifier):
             return True
         
         except Exception as e:
-            logger.error(f"Failed to send email: {e}")
+            if not self._warned:
+                logger.warning(f"Email notification disabled: {e}")
+                self._warned = True
             return False
     
     def _format_html(self, event: NotificationEvent) -> str:

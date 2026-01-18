@@ -18,8 +18,10 @@ import yaml
 # SUB-MODELS
 # =============================================================================
 
+
 class OrchestratorConfig(BaseModel):
     """Orchestrator settings."""
+
     cycle_interval: int = Field(default=3600, ge=60, description="Cycle interval in seconds")
     max_workers: int = Field(default=4, ge=1, le=32)
     enabled_analyzers: list[str] = Field(default_factory=lambda: ["log_analyzer", "code_analyzer"])
@@ -28,30 +30,47 @@ class OrchestratorConfig(BaseModel):
 
 class AuthConfig(BaseModel):
     """Authentication configuration."""
+
     type: Literal["token", "ssh", "basic"] = "token"
-    token_env_var: str | None = None
+    token: str | None = None  # Direct token value
+    token_env_var: str | None = None  # Or environment variable name
     ssh_key_path: str | None = None
     username_env_var: str | None = None
     password_env_var: str | None = None
-    
+
     def get_token(self) -> str | None:
+        # First check direct token
+        if self.token:
+            return self.token
+        # Then check environment variable
         if self.token_env_var:
-            return os.getenv(self.token_env_var)
+            token = self.token_env_var
+            if token:
+                return token
+        # Fallback to common env var names
+        for env_var in ["GITHUB_TOKEN", "GH_TOKEN", "GITLAB_TOKEN"]:
+            token = os.getenv(env_var)
+            if token:
+                return token
         return None
 
 
 class CodebaseConfig(BaseModel):
     """Codebase configuration."""
+
     repository_url: str
     target_branch: str = "main"
     local_path: str = "/var/acia/repos"
     auth: AuthConfig = Field(default_factory=AuthConfig)
     include_patterns: list[str] = Field(default_factory=lambda: ["**/*.py", "**/*.js"])
-    exclude_patterns: list[str] = Field(default_factory=lambda: ["**/node_modules/**", "**/venv/**"])
+    exclude_patterns: list[str] = Field(
+        default_factory=lambda: ["**/node_modules/**", "**/venv/**"]
+    )
 
 
 class LogSourceConfig(BaseModel):
     """Individual log source configuration."""
+
     name: str
     type: Literal["file", "elasticsearch", "cloudwatch", "datadog", "splunk"]
     path: str | None = None
@@ -65,6 +84,7 @@ class LogSourceConfig(BaseModel):
 
 class LogsConfig(BaseModel):
     """Log analysis configuration."""
+
     sources: list[LogSourceConfig] = Field(default_factory=list)
     lookback_period: str = "24h"
     error_threshold: int = 5
@@ -73,6 +93,7 @@ class LogsConfig(BaseModel):
 
 class StaticAnalyzerConfig(BaseModel):
     """Static analyzer configuration."""
+
     tool: str
     config: str | None = None
     min_score: float | None = None
@@ -81,6 +102,7 @@ class StaticAnalyzerConfig(BaseModel):
 
 class ComplexityConfig(BaseModel):
     """Code complexity thresholds."""
+
     max_cyclomatic: int = 10
     max_cognitive: int = 15
     max_function_length: int = 50
@@ -89,6 +111,7 @@ class ComplexityConfig(BaseModel):
 
 class SecurityConfig(BaseModel):
     """Security scanning configuration."""
+
     enabled: bool = True
     tools: list[str] = Field(default_factory=lambda: ["bandit", "semgrep"])
     severity_threshold: Literal["low", "medium", "high", "critical"] = "medium"
@@ -96,6 +119,7 @@ class SecurityConfig(BaseModel):
 
 class DependencyConfig(BaseModel):
     """Dependency analysis configuration."""
+
     check_outdated: bool = True
     check_vulnerabilities: bool = True
     auto_update_patch: bool = True
@@ -104,6 +128,7 @@ class DependencyConfig(BaseModel):
 
 class AnalysisConfig(BaseModel):
     """Code analysis configuration."""
+
     static_analyzers: dict[str, list[StaticAnalyzerConfig]] = Field(default_factory=dict)
     complexity: ComplexityConfig = Field(default_factory=ComplexityConfig)
     security: SecurityConfig = Field(default_factory=SecurityConfig)
@@ -112,12 +137,18 @@ class AnalysisConfig(BaseModel):
 
 class LLMProviderConfig(BaseModel):
     """LLM provider configuration."""
+
     model: str
-    api_key_env_var: str | None = None
+    api_key: str | None = None  # Direct API key
+    api_key_env_var: str | None = None  # Or environment variable name
     endpoint: str | None = None
     max_tokens: int = 4096
-    
+
     def get_api_key(self) -> str | None:
+        # First check for direct api_key
+        if self.api_key:
+            return self.api_key
+        # Then check environment variable
         if self.api_key_env_var:
             return os.getenv(self.api_key_env_var)
         return None
@@ -125,6 +156,7 @@ class LLMProviderConfig(BaseModel):
 
 class ImprovementStrategy(BaseModel):
     """Improvement strategy configuration."""
+
     name: str
     priority: int = 1
     enabled: bool = True
@@ -132,6 +164,7 @@ class ImprovementStrategy(BaseModel):
 
 class ImprovementConstraints(BaseModel):
     """Constraints for code improvements."""
+
     max_changes_per_file: int = 10
     max_files_per_pr: int = 5
     require_tests: bool = True
@@ -140,13 +173,14 @@ class ImprovementConstraints(BaseModel):
 
 class ImprovementEngineConfig(BaseModel):
     """AI/LLM improvement engine configuration."""
+
     provider: Literal["anthropic", "openai", "local"] = "anthropic"
     anthropic: LLMProviderConfig | None = None
     openai: LLMProviderConfig | None = None
     local: LLMProviderConfig | None = None
     strategies: list[ImprovementStrategy] = Field(default_factory=list)
     constraints: ImprovementConstraints = Field(default_factory=ImprovementConstraints)
-    
+
     def get_active_provider(self) -> LLMProviderConfig:
         providers = {
             "anthropic": self.anthropic,
@@ -161,12 +195,14 @@ class ImprovementEngineConfig(BaseModel):
 
 class GitUserConfig(BaseModel):
     """Git user configuration."""
+
     name: str = "ACIA Bot"
     email: str = "acia-bot@example.com"
 
 
 class PRConfig(BaseModel):
     """Pull request configuration."""
+
     platform: Literal["github", "gitlab", "bitbucket", "azure"] = "github"
     title_format: str = "[ACIA] {type}: {summary}"
     labels: list[str] = Field(default_factory=lambda: ["automated", "acia-bot"])
@@ -176,6 +212,7 @@ class PRConfig(BaseModel):
 
 class GitConfig(BaseModel):
     """Git configuration."""
+
     user: GitUserConfig = Field(default_factory=GitUserConfig)
     branch_prefix: str = "acia/"
     branch_format: str = "{type}/{timestamp}-{short_description}"
@@ -185,12 +222,13 @@ class GitConfig(BaseModel):
 
 class SMTPConfig(BaseModel):
     """SMTP configuration."""
+
     host: str
     port: int = 587
     use_tls: bool = True
     username_env_var: str | None = None
     password_env_var: str | None = None
-    
+
     def get_credentials(self) -> tuple[str | None, str | None]:
         username = os.getenv(self.username_env_var) if self.username_env_var else None
         password = os.getenv(self.password_env_var) if self.password_env_var else None
@@ -199,6 +237,7 @@ class SMTPConfig(BaseModel):
 
 class EmailConfig(BaseModel):
     """Email notification configuration."""
+
     enabled: bool = True
     smtp: SMTPConfig | None = None
     from_address: str = "acia-bot@example.com"
@@ -207,10 +246,11 @@ class EmailConfig(BaseModel):
 
 class SlackConfig(BaseModel):
     """Slack notification configuration."""
+
     enabled: bool = False
     webhook_url_env_var: str | None = None
     channel: str = "#acia-notifications"
-    
+
     def get_webhook_url(self) -> str | None:
         if self.webhook_url_env_var:
             return os.getenv(self.webhook_url_env_var)
@@ -219,6 +259,7 @@ class SlackConfig(BaseModel):
 
 class WebhookEndpoint(BaseModel):
     """Webhook endpoint configuration."""
+
     url: str
     events: list[str] = Field(default_factory=list)
     auth_header_env_var: str | None = None
@@ -226,12 +267,14 @@ class WebhookEndpoint(BaseModel):
 
 class WebhookConfig(BaseModel):
     """Webhook notification configuration."""
+
     enabled: bool = False
     endpoints: list[WebhookEndpoint] = Field(default_factory=list)
 
 
 class NotificationsConfig(BaseModel):
     """Notifications configuration."""
+
     email: EmailConfig = Field(default_factory=EmailConfig)
     slack: SlackConfig = Field(default_factory=SlackConfig)
     webhook: WebhookConfig = Field(default_factory=WebhookConfig)
@@ -239,6 +282,7 @@ class NotificationsConfig(BaseModel):
 
 class StorageConfig(BaseModel):
     """Storage configuration."""
+
     type: Literal["sqlite", "postgres", "mongodb"] = "sqlite"
     sqlite: dict[str, Any] = Field(default_factory=lambda: {"path": "/var/acia/acia.db"})
     postgres: dict[str, Any] = Field(default_factory=dict)
@@ -248,6 +292,7 @@ class StorageConfig(BaseModel):
 
 class SafetyConfig(BaseModel):
     """Safety and limits configuration."""
+
     dry_run: bool = False
     max_prs_per_day: int = 10
     require_approval: list[str] = Field(default_factory=list)
@@ -259,8 +304,10 @@ class SafetyConfig(BaseModel):
 # MAIN CONFIG
 # =============================================================================
 
+
 class ACIAConfig(BaseModel):
     """Main ACIA configuration."""
+
     orchestrator: OrchestratorConfig = Field(default_factory=OrchestratorConfig)
     codebase: CodebaseConfig
     logs: LogsConfig = Field(default_factory=LogsConfig)
@@ -270,20 +317,20 @@ class ACIAConfig(BaseModel):
     notifications: NotificationsConfig = Field(default_factory=NotificationsConfig)
     storage: StorageConfig = Field(default_factory=StorageConfig)
     safety: SafetyConfig = Field(default_factory=SafetyConfig)
-    
+
     @classmethod
     def from_yaml(cls, path: str | Path) -> ACIAConfig:
         """Load configuration from YAML file."""
         with open(path) as f:
             data = yaml.safe_load(f)
         return cls(**data)
-    
+
     @classmethod
     def from_env(cls) -> ACIAConfig:
         """Load configuration from environment variables."""
         config_path = os.getenv("ACIA_CONFIG", "config.yaml")
         return cls.from_yaml(config_path)
-    
+
     def to_yaml(self, path: str | Path) -> None:
         """Save configuration to YAML file."""
         with open(path, "w") as f:

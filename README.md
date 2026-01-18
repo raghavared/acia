@@ -74,7 +74,7 @@ cp config.example.yaml config.yaml
 # Edit config.yaml with your settings
 
 # Run the agent
-python -m acia.main --config config.yaml
+python -m acia.main run --config config.yaml
 ```
 
 ## Configuration

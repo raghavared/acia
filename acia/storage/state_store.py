@@ -64,6 +64,10 @@ class StateStore(ABC):
     ) -> list[CycleResult]:
         """Get cycle history."""
         pass
+    
+    async def get_recent_cycles(self, limit: int = 5) -> list[CycleResult]:
+        """Get recent cycles - convenience method."""
+        return await self.get_cycles(limit=limit)
 
 
 class SQLiteStateStore(StateStore):

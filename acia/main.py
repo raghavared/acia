@@ -85,7 +85,8 @@ def run(config: Path, dry_run: bool):
         asyncio.run(OrchestratorFactory.create_and_run(acia_config))
     
     except KeyboardInterrupt:
-        logger.info("Received interrupt signal, shutting down...")
+        print("\n\n👋 ACIA stopped by user. Goodbye!", flush=True)
+        sys.exit(0)
     except Exception as e:
         logger.exception("ACIA failed", error=str(e))
         sys.exit(1)
@@ -201,10 +202,10 @@ def status(config: Path):
     total cycles run, PRs created, and recent activity.
     """
     async def show_status():
-        from acia.storage.state_store import StateStore
+        from acia.storage.state_store import create_state_store
         
         acia_config = ACIAConfig.from_yaml(config)
-        store = StateStore(acia_config.storage)
+        store = create_state_store(acia_config.storage)
         await store.initialize()
         
         state = await store.load_state()
